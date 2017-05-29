@@ -1,0 +1,85 @@
+import numpy as np
+
+def unpickle(files):
+    Xtr = []
+    Ytr = []
+    import pickle
+    for file in files:    
+        with open(file, 'rb') as fo:
+            dict = pickle.load(fo, encoding='bytes')
+            Xtr.append(dict[b'data'])
+            Ytr.append(dict[b'labels'])
+    return Xtr,Ytr
+
+def vmerge(to_merge):
+    merged = to_merge[0]
+    for data in to_merge[1:]:
+        merged = np.vstack((merged,data))
+    return merged
+
+def hmerge(to_merge):
+    merged = to_merge[0]
+    for data in to_merge[1:]:
+        merged = np.hstack((merged,data))
+    return merged
+
+train_files = ['/home/catch/Jupyter Notebook/CS231n/cifar-10-batches-py/data_batch_1',
+               '/home/catch/Jupyter Notebook/CS231n/cifar-10-batches-py/data_batch_2',
+               '/home/catch/Jupyter Notebook/CS231n/cifar-10-batches-py/data_batch_3',
+               '/home/catch/Jupyter Notebook/CS231n/cifar-10-batches-py/data_batch_4',
+               '/home/catch/Jupyter Notebook/CS231n/cifar-10-batches-py/data_batch_5']
+
+test_files = ['/home/catch/Jupyter Notebook/CS231n/cifar-10-batches-py/test_batch']
+
+Xtr, Ytr = unpickle(train_files)         #they are lists of np arrays
+Xtr, Ytr = vmerge(Xtr), hmerge(Ytr)
+Xte, Yte = unpickle(test_files)
+Xte, Yte = Xte[0], np.array(Yte[0])
+print(Xtr.shape)
+print(Ytr.shape)
+print(Xte.shape)
+print(Yte.shape)
+
+train_size = 10000
+test_size = 1000
+
+Xtr_rows = Xtr.reshape(Xtr.shape[0], 32 * 32 * 3) # Xtr_rows becomes 50000 x 3072
+Xte_rows = Xte.reshape(Xte.shape[0], 32 * 32 * 3) # Xte_rows becomes 10000 x 3072
+
+Xtr_rows = Xtr_rows[:train_size,:]
+Ytr = Ytr[:train_size]
+
+Xte_rows = Xte_rows[:test_size,:]
+Yte = Yte[:test_size]
+
+print(Xtr_rows.shape)
+print(Ytr.shape)
+print(Xte_rows.shape)
+print(Yte.shape)
+
+class NearestNeighbor(object):
+    def __init__(self):
+        pass
+    
+    def train(self, X, y):
+        self.Xtr = X
+        self.ytr = y
+        
+    def predict(self, X):
+        num_test = X.shape[0]
+        Ypred = np.zeros(num_test, dtype = self.ytr.dtype)
+        
+        for i in range(num_test):
+            #l1 distance
+            distances = np.sum(np.abs(self.Xtr - X[i,:]), axis = 1)
+            min_index = np.argmin(distances)
+            Ypred[i] = self.ytr[min_index]
+            
+        return Ypred
+        
+nn = NearestNeighbor()
+nn.train(Xtr_rows, Ytr)
+Ypred = nn.predict(Xte_rows)
+
+acc = np.mean(Ypred == Yte)
+print('accracy: %f' %acc)
